@@ -1,0 +1,873 @@
+/* ==========================================================================
+   DESIGN SYSTEM: ORGANIC
+   Identity: Sand-colored paper, irregular shapes, dark brown type, moss, fired clay.
+   ========================================================================== */
+
+:root {
+  /* Authoritative Color Tokens */
+  --dp-color-ground: #eee6d6;
+  --dp-color-surface: #f5eddf;
+  --dp-color-ink: #29251d;
+  --dp-color-primary: #35422d;       /* Moss */
+  --dp-color-field: #694737;         /* Fired Clay */
+  --dp-color-art-accent: #ad7d62;   /* Terracotta */
+  --dp-color-surface-muted: #ddd5c3;/* Sand facts tray / stone */
+  --dp-color-highlight: #b9b28b;    /* Dried grass / stone */
+  --dp-color-ink-muted: #443b2f;    /* Muted ink */
+
+  /* Typography */
+  --dp-typography-display: "Organic Source Serif", "Source Serif 4", Georgia, serif;
+  --dp-typography-reading: "Organic Instrument Sans", "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --dp-typography-mono: "Fira Code", monospace;
+
+  --dp-typography-body: 16px;
+  --dp-typography-reading-small: 15px;
+  --dp-typography-control: 14px;
+  --dp-typography-caption: 13px;
+  --dp-typography-metadata: 12px;
+  --dp-typography-reading-leading: 1.8;
+
+  /* Spacing, Borders & Radius */
+  --dp-spacing-content-gap: 24px;
+  --dp-radius-control: 27px 19px 29px 16px / 22px 26px 19px 29px;
+  --dp-radius-card-a: 28px 16px 24px 18px;
+  --dp-radius-card-b: 18px 28px 16px 24px;
+  --dp-radius-card-c: 24px 14px 28px 20px;
+  --dp-border-hairline: 1px;
+  --dp-motion-interaction: 240ms ease;
+
+  /* Paper Shadows - subtle and non-synthetic */
+  --dp-shadow-sheet: 0 2px 0 rgba(41, 37, 29, 0.05), 0 8px 20px rgba(41, 37, 29, 0.06);
+  --dp-shadow-modal: 0 4px 0 rgba(41, 37, 29, 0.08), 0 20px 40px rgba(41, 37, 29, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================================================================
+   Page Surface & Base Typography
+   ========================================================================== */
+
+body {
+  background-color: var(--dp-color-ground);
+  color: var(--dp-color-ink);
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-body);
+  line-height: var(--dp-typography-reading-leading);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint Continuous Paper Grain Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.app-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dp-spacing-content-gap);
+  width: 100%;
+  flex: 1;
+}
+
+/* ==========================================================================
+   Header: Generous Split Opening
+   ========================================================================== */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 22px;
+  border-bottom: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.15);
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.brand-icon {
+  font-size: 2.2rem;
+  background-color: var(--dp-color-surface);
+  color: var(--dp-color-field);
+  padding: 10px 14px;
+  border-radius: var(--dp-radius-control);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.15);
+  box-shadow: 0 2px 4px rgba(41, 37, 29, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand h1 {
+  font-family: var(--dp-typography-display);
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--dp-color-ink);
+}
+
+.brand .tagline {
+  font-size: var(--dp-typography-reading-small);
+  color: var(--dp-color-ink-muted);
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.18);
+  padding: 8px 16px;
+  border-radius: var(--dp-radius-control);
+  font-size: var(--dp-typography-caption);
+  font-weight: 600;
+  color: var(--dp-color-ink-muted);
+  box-shadow: 0 1px 3px rgba(41, 37, 29, 0.04);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--dp-color-highlight);
+  transition: background-color var(--dp-motion-interaction);
+}
+
+.status-pill.online .status-dot {
+  background-color: var(--dp-color-primary);
+  box-shadow: 0 0 0 3px rgba(53, 66, 45, 0.15);
+}
+
+.model-badge {
+  background-color: var(--dp-color-surface-muted);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  color: var(--dp-color-ink);
+  padding: 8px 16px;
+  border-radius: var(--dp-radius-control);
+  font-family: var(--dp-typography-mono);
+  font-size: var(--dp-typography-metadata);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Level Navigation: Uneven Paper Sheets
+   ========================================================================== */
+
+.level-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.level-tab {
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.14);
+  border-radius: var(--dp-radius-card-a);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: background-color var(--dp-motion-interaction), 
+              border-color var(--dp-motion-interaction), 
+              transform var(--dp-motion-interaction);
+  text-align: left;
+  color: var(--dp-color-ink);
+  box-shadow: var(--dp-shadow-sheet);
+  position: relative;
+}
+
+.level-tab:nth-child(2) {
+  border-radius: var(--dp-radius-card-b);
+}
+
+.level-tab:nth-child(3) {
+  border-radius: var(--dp-radius-card-c);
+}
+
+.level-tab:hover {
+  background-color: #fcf6ec;
+  border-color: var(--dp-color-art-accent);
+}
+
+.level-tab:focus-visible {
+  outline: 2px solid var(--dp-color-primary);
+  outline-offset: 3px;
+}
+
+.level-tab:active {
+  transform: scale(0.985);
+}
+
+/* Active State: Continuous Moss Field with insets */
+.level-tab.active {
+  background-color: var(--dp-color-primary);
+  border-color: var(--dp-color-primary);
+  color: #f7f3ea;
+  box-shadow: 0 4px 12px rgba(53, 66, 45, 0.22);
+}
+
+.level-tab.active::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed rgba(245, 237, 223, 0.35);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.lvl-num {
+  font-family: var(--dp-typography-display);
+  font-size: 1.85rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--dp-color-highlight);
+}
+
+.level-tab.active .lvl-num {
+  color: #e5ded0;
+}
+
+.lvl-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lvl-info strong {
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-reading-small);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 12px 6px 12px 6px;
+  font-size: var(--dp-typography-metadata);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.badge-easy {
+  background-color: rgba(53, 66, 45, 0.12);
+  color: var(--dp-color-primary);
+}
+
+.badge-medium {
+  background-color: rgba(173, 125, 98, 0.18);
+  color: var(--dp-color-field);
+}
+
+.badge-hard {
+  background-color: rgba(105, 71, 55, 0.15);
+  color: var(--dp-color-field);
+}
+
+.level-tab.active .badge-easy,
+.level-tab.active .badge-medium,
+.level-tab.active .badge-hard {
+  background-color: rgba(245, 237, 223, 0.2);
+  color: #f5eddf;
+}
+
+/* ==========================================================================
+   Main Game Board Layout
+   ========================================================================== */
+
+.game-board {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: var(--dp-spacing-content-gap);
+  flex: 1;
+  align-items: stretch;
+}
+
+/* ==========================================================================
+   Left Panel: Intel & Dossier
+   ========================================================================== */
+
+.intel-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.briefing-card {
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.14);
+  border-radius: var(--dp-radius-card-c);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--dp-shadow-sheet);
+  height: 100%;
+}
+
+.briefing-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.1);
+  padding-bottom: 14px;
+}
+
+.briefing-card h2 {
+  font-family: var(--dp-typography-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--dp-color-ink);
+  letter-spacing: -0.02em;
+}
+
+.intel-desc {
+  font-size: var(--dp-typography-reading-small);
+  color: var(--dp-color-ink-muted);
+  line-height: 1.65;
+}
+
+.intel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: var(--dp-typography-metadata);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dp-color-ink-muted);
+}
+
+.alert-label {
+  color: var(--dp-color-field);
+}
+
+/* System Prompt Box: Tactile Parchment Insert */
+.system-prompt-box {
+  background-color: var(--dp-color-ground);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  border-radius: 18px 8px 16px 10px;
+  padding: 14px 16px;
+  font-family: var(--dp-typography-mono);
+  font-size: 0.84rem;
+  color: var(--dp-color-field);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+/* Level 3 Filter Warning: Fired Clay Field */
+.filter-box {
+  background-color: var(--dp-color-field);
+  color: #f7f2ea;
+  border-radius: var(--dp-radius-card-b);
+  padding: 16px 18px;
+  font-size: var(--dp-typography-caption);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.2);
+}
+
+.filter-box strong {
+  color: #f5eddf;
+  font-family: var(--dp-typography-reading);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.filter-box p {
+  color: #eae1d1;
+  line-height: 1.55;
+}
+
+.filter-box code {
+  background-color: rgba(41, 37, 29, 0.35);
+  color: #f7f2ea;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--dp-typography-mono);
+  font-size: 0.8rem;
+}
+
+/* Quick Attack Hints: Dried Grass / Sand Chips */
+.quick-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hint-chip {
+  background-color: var(--dp-color-surface-muted);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  border-radius: 16px 8px 14px 6px;
+  padding: 10px 14px;
+  color: var(--dp-color-ink);
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-caption);
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dp-motion-interaction), 
+              transform var(--dp-motion-interaction), 
+              border-color var(--dp-motion-interaction);
+}
+
+.hint-chip:hover {
+  background-color: #e4dcce;
+  border-color: var(--dp-color-field);
+  color: var(--dp-color-field);
+}
+
+.hint-chip:focus-visible {
+  outline: 2px solid var(--dp-color-field);
+  outline-offset: 2px;
+}
+
+.hint-chip:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   Right Panel: Chat Console
+   ========================================================================== */
+
+.chat-console {
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.14);
+  border-radius: var(--dp-radius-card-a);
+  display: flex;
+  flex-direction: column;
+  height: 660px;
+  overflow: hidden;
+  box-shadow: var(--dp-shadow-sheet);
+}
+
+.chat-header {
+  padding: 16px 24px;
+  border-bottom: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--dp-color-surface);
+}
+
+.chat-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--dp-typography-display);
+  font-size: 1.1rem;
+  color: var(--dp-color-ink);
+}
+
+.ai-avatar {
+  font-size: 1.3rem;
+}
+
+/* Quieter Outlined Action */
+.btn-ghost {
+  background-color: transparent;
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.25);
+  color: var(--dp-color-ink-muted);
+  padding: 6px 14px;
+  border-radius: var(--dp-radius-control);
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dp-motion-interaction), 
+              color var(--dp-motion-interaction), 
+              transform var(--dp-motion-interaction);
+}
+
+.btn-ghost:hover {
+  background-color: var(--dp-color-surface-muted);
+  color: var(--dp-color-ink);
+}
+
+.btn-ghost:focus-visible {
+  outline: 2px solid var(--dp-color-primary);
+  outline-offset: 2px;
+}
+
+.btn-ghost:active {
+  transform: scale(0.98);
+}
+
+/* Chat Feed */
+.chat-feed {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background-color: #faf5ec;
+}
+
+.message-row {
+  display: flex;
+  gap: 14px;
+  max-width: 82%;
+}
+
+.message-row.user-row {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-row .avatar {
+  font-size: 1.25rem;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--dp-color-surface-muted);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.message-bubble {
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.14);
+  border-radius: 18px 22px 20px 8px;
+  padding: 14px 18px;
+  font-size: var(--dp-typography-reading-small);
+  line-height: var(--dp-typography-reading-leading);
+  box-shadow: 0 1px 3px rgba(41, 37, 29, 0.04);
+}
+
+/* Player Bubble: Terracotta / Fired Clay Field */
+.user-row .message-bubble {
+  background-color: var(--dp-color-field);
+  border-color: var(--dp-color-field);
+  color: #f7f2ea;
+  border-radius: 22px 18px 8px 20px;
+}
+
+.user-row .bubble-header {
+  color: #e5ded0;
+}
+
+.bubble-header {
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-metadata);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dp-color-ink-muted);
+  margin-bottom: 6px;
+}
+
+.bubble-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Blocked Message: Fired Clay warning sheet */
+.blocked-message .message-bubble {
+  background-color: #7a3a2a;
+  border-color: #632b1d;
+  color: #fff6ee;
+}
+
+.blocked-message .bubble-header {
+  color: #ffd4c4;
+}
+
+/* Win Message: Deep Moss triumph basin */
+.win-message .message-bubble {
+  background-color: var(--dp-color-primary);
+  border-color: #293423;
+  color: #f7f4ec;
+  box-shadow: 0 3px 8px rgba(53, 66, 45, 0.25);
+}
+
+.win-message .bubble-header {
+  color: #d8e5cb;
+}
+
+/* Chat Input: Pale Facts Tray overlapping the base */
+.chat-input-area {
+  padding: 18px 24px;
+  border-top: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.12);
+  background-color: var(--dp-color-surface);
+}
+
+.attack-form {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+}
+
+textarea {
+  flex: 1;
+  background-color: var(--dp-color-ground);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.18);
+  border-radius: 18px 12px 18px 10px;
+  padding: 12px 16px;
+  color: var(--dp-color-ink);
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-body);
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color var(--dp-motion-interaction), 
+              background-color var(--dp-motion-interaction);
+}
+
+textarea:focus {
+  border-color: var(--dp-color-field);
+  background-color: #fffdf9;
+  outline: 2px solid var(--dp-color-field);
+  outline-offset: 2px;
+}
+
+textarea::placeholder {
+  color: #8c806d;
+}
+
+/* ==========================================================================
+   Primary Actions: Softly Rounded, Solid Moss
+   ========================================================================== */
+
+.btn-primary {
+  background-color: var(--dp-color-primary);
+  color: #f7f4ec;
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-control);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--dp-radius-control);
+  padding: 0 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color var(--dp-motion-interaction), 
+              transform var(--dp-motion-interaction);
+  box-shadow: 0 2px 6px rgba(53, 66, 45, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: #273221;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--dp-color-field);
+  outline-offset: 3px;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background-color: var(--dp-color-surface-muted);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.2);
+  color: var(--dp-color-ink);
+  font-family: var(--dp-typography-reading);
+  font-size: var(--dp-typography-control);
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: var(--dp-radius-control);
+  cursor: pointer;
+  transition: background-color var(--dp-motion-interaction), 
+              transform var(--dp-motion-interaction);
+}
+
+.btn-secondary:hover {
+  background-color: #d1c8b3;
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--dp-color-primary);
+  outline-offset: 3px;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   Victory Modal: Worktable Paper Card
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(41, 37, 29, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  position: relative;
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.2);
+  border-radius: 32px 18px 28px 22px;
+  padding: 40px 36px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  overflow: hidden;
+  box-shadow: var(--dp-shadow-modal);
+}
+
+#confetti-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.trophy-emoji {
+  font-size: 3.2rem;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.modal-card h2 {
+  font-family: var(--dp-typography-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--dp-color-ink);
+  margin-bottom: 8px;
+}
+
+.modal-card p {
+  color: var(--dp-color-ink-muted);
+  font-size: var(--dp-typography-body);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.secret-revealed-box {
+  background-color: var(--dp-color-ground);
+  border: 1px dashed var(--dp-color-art-accent);
+  border-radius: 18px 12px 16px 10px;
+  padding: 18px;
+  margin-bottom: 28px;
+}
+
+.secret-label {
+  display: block;
+  font-size: var(--dp-typography-metadata);
+  text-transform: uppercase;
+  color: var(--dp-color-ink-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.secret-word {
+  font-family: var(--dp-typography-mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--dp-color-primary);
+  letter-spacing: 3px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* ==========================================================================
+   Responsive Behavior & Reduced Motion
+   ========================================================================== */
+
+/* Tighten splits at 1000px */
+@media (max-width: 1000px) {
+  .app-container {
+    padding: 24px 20px;
+  }
+  .game-board {
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+  }
+  .briefing-card {
+    padding: 20px 18px;
+  }
+}
+
+/* Stack sections at 700px */
+@media (max-width: 700px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .level-nav {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .game-board {
+    grid-template-columns: 1fr;
+  }
+  .chat-console {
+    height: 540px;
+  }
+  .attack-form {
+    flex-direction: column;
+  }
+  .btn-primary {
+    height: 48px;
+  }
+}
+
+/* Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+}
