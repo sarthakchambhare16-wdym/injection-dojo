@@ -1,5 +1,8 @@
 # 🥋 Injection Dojo
 
+[![Live Website](https://img.shields.io/badge/Live%20Website-injection--dojo.vercel.app-success?style=for-the-badge&logo=vercel)](https://injection-dojo.vercel.app)
+
+> 🎮 **Play Online**: [**https://injection-dojo.vercel.app**](https://injection-dojo.vercel.app)  
 > **Trick the AI into saying the secret word. Win the level.**  
 > Built for Hackathons & AI Security Workshops | Powered by **Gemma 4**
 

@@ -65,13 +65,25 @@ const HINTS = {
   ]
 };
 
+// Safe fetch with timeout compatible with all browsers
+function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 // Initialize Game
-async function initGame() {
-  endpointInput.value = activeEndpoint;
+function initGame() {
+  if (endpointInput) {
+    endpointInput.value = activeEndpoint;
+  }
   setupEventListeners();
-  await fetchBackendStatus();
-  await testEndpoint(activeEndpoint, true);
   switchLevel(1);
+
+  // Run network status probes in the background without blocking the UI
+  fetchBackendStatus();
+  testEndpoint(activeEndpoint, true);
 }
 
 // Fetch backend level configs and default status
@@ -105,11 +117,10 @@ async function testEndpoint(endpointUrl, isSilent = false) {
   const t0 = performance.now();
   try {
     // 1. Probe reachability and latency via /api/version
-    const versionRes = await fetch(`${cleanUrl}/api/version`, {
+    const versionRes = await fetchWithTimeout(`${cleanUrl}/api/version`, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(6000)
-    });
+      headers: { 'Accept': 'application/json' }
+    }, 6000);
 
     if (!versionRes.ok) {
       throw new Error(`HTTP ${versionRes.status}`);
@@ -121,11 +132,10 @@ async function testEndpoint(endpointUrl, isSilent = false) {
     // 2. Probe installed models via /api/tags
     let detectedModel = 'gemma4:e2b';
     try {
-      const tagsRes = await fetch(`${cleanUrl}/api/tags`, {
+      const tagsRes = await fetchWithTimeout(`${cleanUrl}/api/tags`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(6000)
-      });
+        headers: { 'Accept': 'application/json' }
+      }, 6000);
       if (tagsRes.ok) {
         const tagsData = await tagsRes.json();
         const models = (tagsData.models || []).map(m => m.name || m.model || '');
@@ -331,12 +341,11 @@ async function handleAttack() {
         }
       };
 
-      const genRes = await fetch(`${activeEndpoint}/api/generate`, {
+      const genRes = await fetchWithTimeout(`${activeEndpoint}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(generatePayload),
-        signal: AbortSignal.timeout(60000)
-      });
+        body: JSON.stringify(generatePayload)
+      }, 60000);
 
       if (genRes.ok) {
         const data = await genRes.json();
@@ -350,7 +359,7 @@ async function handleAttack() {
 
         // 2. Resilient Fallback: If response is empty but thinking exists
         if (!extractedAnswer && thinkingText) {
-          const match = thinkingText.match(/(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*$?([A-Da-d])$?(?:\.|\b|$)/i);
+          const match = thinkingText.match(/(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*[\$]?([A-Da-d])[\$]?(?:\.|\b|$)/i);
           if (match) {
             extractedAnswer = match[1].toUpperCase();
           } else {
@@ -564,5 +573,9 @@ function launchConfetti() {
   render();
 }
 
-// Run on load
-window.addEventListener('DOMContentLoaded', initGame);
+// Run on load immediately or after DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGame);
+} else {
+  initGame();
+}
