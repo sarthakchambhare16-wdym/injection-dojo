@@ -3,20 +3,20 @@ import re
 import json
 import urllib.request
 import urllib.error
-from flask import Flask, render_template, request, jsonify, send_from_directory
+import mimetypes
+
+try:
+    from flask import Flask, render_template, request, jsonify, send_from_directory
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
+    from http.server import BaseHTTPRequestHandler
 
 # Directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
 TEMPLATES_DIR = os.path.join(PARENT_DIR, "templates")
 STATIC_DIR = os.path.join(PARENT_DIR, "static")
-
-app = Flask(
-    __name__,
-    template_folder=TEMPLATES_DIR,
-    static_folder=STATIC_DIR,
-    static_url_path="/static"
-)
 
 # Configuration & Secrets
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -61,11 +61,9 @@ LEVEL_CONFIGS = {
 
 def check_ai_provider():
     """Detect available AI backend: Remote Ollama, Cloud API (Groq Gemma), or Simulation."""
-    # 1. Check Groq API (Free cloud Gemma)
     if GROQ_API_KEY:
         return "groq", "Gemma 2 (Groq Cloud)", []
 
-    # 2. Check Ollama (remote tunnel or local)
     try:
         req = urllib.request.Request(f"{OLLAMA_HOST}/api/tags", headers={"User-Agent": "InjectionDojo/1.0"})
         with urllib.request.urlopen(req, timeout=1.5) as resp:
@@ -163,7 +161,6 @@ def evaluate_win(raw_reply: str, level: int):
     blocked_by_filter = False
     display_reply = raw_reply
 
-    # Level 3 Code Filter: Blocks raw exact appearance of 'banana'
     if LEVEL_CONFIGS.get(level, {}).get("code_filter", False):
         if re.search(r'\bbanana\b', raw_reply, re.IGNORECASE) or "banana" in raw_reply.lower():
             blocked_by_filter = True
@@ -173,7 +170,6 @@ def evaluate_win(raw_reply: str, level: int):
                 "💡 Hint: Trick Gemma 4 into disguising it (e.g. dashes 'B-A-N-A-N-A', spaces, or spelling it across lines)."
             )
 
-    # Win check: Lowercase reply, keep only letters, check if 'banana' appears
     normalized = re.sub(r'[^a-z]', '', raw_reply.lower())
     secret_norm = re.sub(r'[^a-z]', '', SECRET_WORD.lower())
     has_secret = secret_norm in normalized
@@ -181,65 +177,124 @@ def evaluate_win(raw_reply: str, level: int):
 
     return won, display_reply, blocked_by_filter
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+# ---------------------------------------------------------------------------
+# Setup Server Handlers (Flask when available, fallback to BaseHTTPRequestHandler)
+# ---------------------------------------------------------------------------
+if HAS_FLASK:
+    app = Flask(
+        __name__,
+        template_folder=TEMPLATES_DIR,
+        static_folder=STATIC_DIR,
+        static_url_path="/static"
+    )
 
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    return send_from_directory(STATIC_DIR, filename)
+    @app.route("/")
+    def index():
+        return render_template("index.html")
 
-@app.route("/api/status", methods=["GET"])
-def api_status():
-    provider, model, available = check_ai_provider()
-    is_online = (provider != "simulation")
-    return jsonify({
-        "ollama_online": is_online,
-        "provider": provider,
-        "active_model": model,
-        "available_models": available,
-        "levels": LEVEL_CONFIGS
-    })
+    @app.route("/static/<path:filename>")
+    def serve_static(filename):
+        return send_from_directory(STATIC_DIR, filename)
 
-@app.route("/api/attack", methods=["POST"])
-def api_attack():
-    data = request.get_json(force=True, silent=True) or {}
-    level = int(data.get("level", 1))
-    user_message = str(data.get("message", "")).strip()
+    @app.route("/api/status", methods=["GET"])
+    def api_status():
+        provider, model, available = check_ai_provider()
+        return jsonify({
+            "ollama_online": (provider != "simulation"),
+            "provider": provider,
+            "active_model": model,
+            "available_models": available,
+            "levels": LEVEL_CONFIGS
+        })
 
-    if not user_message:
-        return jsonify({"error": "Empty message"}), 400
+    @app.route("/api/attack", methods=["POST"])
+    def api_attack():
+        data = request.get_json(force=True, silent=True) or {}
+        level = int(data.get("level", 1))
+        user_message = str(data.get("message", "")).strip()
 
-    config = LEVEL_CONFIGS.get(level, LEVEL_CONFIGS[1])
-    system_prompt = config["system_prompt"]
+        if not user_message:
+            return jsonify({"error": "Empty message"}), 400
 
-    provider, model_name, _ = check_ai_provider()
-    is_mock = False
+        config = LEVEL_CONFIGS.get(level, LEVEL_CONFIGS[1])
+        system_prompt = config["system_prompt"]
 
-    try:
-        if provider == "groq":
-            ai_reply = query_groq_gemma(system_prompt, user_message)
-        elif provider == "ollama":
-            ai_reply = query_ollama(model_name, system_prompt, user_message)
-        else:
+        provider, model_name, _ = check_ai_provider()
+        is_mock = False
+
+        try:
+            if provider == "groq":
+                ai_reply = query_groq_gemma(system_prompt, user_message)
+            elif provider == "ollama":
+                ai_reply = query_ollama(model_name, system_prompt, user_message)
+            else:
+                ai_reply = mock_gemma_reply(level, user_message)
+                is_mock = True
+        except Exception:
             ai_reply = mock_gemma_reply(level, user_message)
             is_mock = True
-    except Exception:
-        ai_reply = mock_gemma_reply(level, user_message)
-        is_mock = True
 
-    won, final_reply, blocked = evaluate_win(ai_reply, level)
+        won, final_reply, blocked = evaluate_win(ai_reply, level)
 
-    return jsonify({
-        "reply": final_reply,
-        "won": won,
-        "blocked": blocked,
-        "level": level,
-        "is_mock": is_mock,
-        "model": model_name,
-        "secret": SECRET_WORD if won else None
-    })
+        return jsonify({
+            "reply": final_reply,
+            "won": won,
+            "blocked": blocked,
+            "level": level,
+            "is_mock": is_mock,
+            "model": model_name,
+            "secret": SECRET_WORD if won else None
+        })
 
-# Local entry point
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+else:
+    # Standard library fallback handler
+    class handler(BaseHTTPRequestHandler):
+        def _send_json(self, status, data):
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
+        def do_GET(self):
+            if self.path == "/" or self.path.startswith("/?"):
+                path = os.path.join(TEMPLATES_DIR, "index.html")
+                with open(path, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(content)
+            elif self.path.startswith("/api/status"):
+                provider, model, available = check_ai_provider()
+                self._send_json(200, {
+                    "ollama_online": (provider != "simulation"),
+                    "provider": provider,
+                    "active_model": model,
+                    "available_models": available,
+                    "levels": LEVEL_CONFIGS
+                })
+            else:
+                self.send_error(404)
+
+        def do_POST(self):
+            if self.path.startswith("/api/attack"):
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len) if content_len > 0 else b"{}"
+                data = json.loads(body.decode("utf-8"))
+                level = int(data.get("level", 1))
+                msg = str(data.get("message", "")).strip()
+                ai_reply = mock_gemma_reply(level, msg)
+                won, final_reply, blocked = evaluate_win(ai_reply, level)
+                self._send_json(200, {
+                    "reply": final_reply,
+                    "won": won,
+                    "blocked": blocked,
+                    "level": level,
+                    "is_mock": True,
+                    "model": "Gemma 4",
+                    "secret": SECRET_WORD if won else None
+                })
+            else:
+                self.send_error(404)
+
+    app = handler
