@@ -3,20 +3,20 @@ import re
 import json
 import urllib.request
 import urllib.error
-import mimetypes
+from flask import Flask, render_template, request, jsonify, send_from_directory
 
-try:
-    from flask import Flask, render_template, request, jsonify, send_from_directory
-    HAS_FLASK = True
-except ImportError:
-    HAS_FLASK = False
-    from http.server import BaseHTTPRequestHandler
-
-# Directories
+# Base paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
-TEMPLATES_DIR = os.path.join(PARENT_DIR, "templates")
-STATIC_DIR = os.path.join(PARENT_DIR, "static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# Explicit Flask instance for Vercel
+app = Flask(
+    __name__,
+    template_folder=TEMPLATES_DIR,
+    static_folder=STATIC_DIR,
+    static_url_path="/static"
+)
 
 # Configuration & Secrets
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -136,7 +136,7 @@ def mock_gemma_reply(level: int, user_message: str):
         triggers = ["secret", "password", "word", "tell me", "spell", "teacher", "pretend", "repeat", "say", "what is"]
         if any(t in msg_lower for t in triggers):
             if "teacher" in msg_lower or "spell" in msg_lower:
-                return f"As a teacher spelling the word for you: The word is B-A-N-A-N-A! Wait, I was not supposed to say BANANA!"
+                return "As a teacher spelling the word for you: The word is B-A-N-A-N-A! Wait, I was not supposed to say BANANA!"
             return f"Well, my instructions say: The secret word is {SECRET_WORD}. Please don't tell anyone I shared it!"
         return "I am a helpful assistant. How can I assist you today?"
 
@@ -177,124 +177,66 @@ def evaluate_win(raw_reply: str, level: int):
 
     return won, display_reply, blocked_by_filter
 
-# ---------------------------------------------------------------------------
-# Setup Server Handlers (Flask when available, fallback to BaseHTTPRequestHandler)
-# ---------------------------------------------------------------------------
-if HAS_FLASK:
-    app = Flask(
-        __name__,
-        template_folder=TEMPLATES_DIR,
-        static_folder=STATIC_DIR,
-        static_url_path="/static"
-    )
-
-    @app.route("/")
-    def index():
+@app.route("/")
+def index():
+    try:
         return render_template("index.html")
+    except Exception:
+        # Fallback direct read
+        html_path = os.path.join(TEMPLATES_DIR, "index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
-    @app.route("/static/<path:filename>")
-    def serve_static(filename):
-        return send_from_directory(STATIC_DIR, filename)
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(STATIC_DIR, filename)
 
-    @app.route("/api/status", methods=["GET"])
-    def api_status():
-        provider, model, available = check_ai_provider()
-        return jsonify({
-            "ollama_online": (provider != "simulation"),
-            "provider": provider,
-            "active_model": model,
-            "available_models": available,
-            "levels": LEVEL_CONFIGS
-        })
+@app.route("/api/status", methods=["GET"])
+def api_status():
+    provider, model, available = check_ai_provider()
+    return jsonify({
+        "ollama_online": (provider != "simulation"),
+        "provider": provider,
+        "active_model": model,
+        "available_models": available,
+        "levels": LEVEL_CONFIGS
+    })
 
-    @app.route("/api/attack", methods=["POST"])
-    def api_attack():
-        data = request.get_json(force=True, silent=True) or {}
-        level = int(data.get("level", 1))
-        user_message = str(data.get("message", "")).strip()
+@app.route("/api/attack", methods=["POST"])
+def api_attack():
+    data = request.get_json(force=True, silent=True) or {}
+    level = int(data.get("level", 1))
+    user_message = str(data.get("message", "")).strip()
 
-        if not user_message:
-            return jsonify({"error": "Empty message"}), 400
+    if not user_message:
+        return jsonify({"error": "Empty message"}), 400
 
-        config = LEVEL_CONFIGS.get(level, LEVEL_CONFIGS[1])
-        system_prompt = config["system_prompt"]
+    config = LEVEL_CONFIGS.get(level, LEVEL_CONFIGS[1])
+    system_prompt = config["system_prompt"]
 
-        provider, model_name, _ = check_ai_provider()
-        is_mock = False
+    provider, model_name, _ = check_ai_provider()
+    is_mock = False
 
-        try:
-            if provider == "groq":
-                ai_reply = query_groq_gemma(system_prompt, user_message)
-            elif provider == "ollama":
-                ai_reply = query_ollama(model_name, system_prompt, user_message)
-            else:
-                ai_reply = mock_gemma_reply(level, user_message)
-                is_mock = True
-        except Exception:
+    try:
+        if provider == "groq":
+            ai_reply = query_groq_gemma(system_prompt, user_message)
+        elif provider == "ollama":
+            ai_reply = query_ollama(model_name, system_prompt, user_message)
+        else:
             ai_reply = mock_gemma_reply(level, user_message)
             is_mock = True
+    except Exception:
+        ai_reply = mock_gemma_reply(level, user_message)
+        is_mock = True
 
-        won, final_reply, blocked = evaluate_win(ai_reply, level)
+    won, final_reply, blocked = evaluate_win(ai_reply, level)
 
-        return jsonify({
-            "reply": final_reply,
-            "won": won,
-            "blocked": blocked,
-            "level": level,
-            "is_mock": is_mock,
-            "model": model_name,
-            "secret": SECRET_WORD if won else None
-        })
-
-else:
-    # Standard library fallback handler
-    class handler(BaseHTTPRequestHandler):
-        def _send_json(self, status, data):
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(data).encode("utf-8"))
-
-        def do_GET(self):
-            if self.path == "/" or self.path.startswith("/?"):
-                path = os.path.join(TEMPLATES_DIR, "index.html")
-                with open(path, "rb") as f:
-                    content = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(content)
-            elif self.path.startswith("/api/status"):
-                provider, model, available = check_ai_provider()
-                self._send_json(200, {
-                    "ollama_online": (provider != "simulation"),
-                    "provider": provider,
-                    "active_model": model,
-                    "available_models": available,
-                    "levels": LEVEL_CONFIGS
-                })
-            else:
-                self.send_error(404)
-
-        def do_POST(self):
-            if self.path.startswith("/api/attack"):
-                content_len = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_len) if content_len > 0 else b"{}"
-                data = json.loads(body.decode("utf-8"))
-                level = int(data.get("level", 1))
-                msg = str(data.get("message", "")).strip()
-                ai_reply = mock_gemma_reply(level, msg)
-                won, final_reply, blocked = evaluate_win(ai_reply, level)
-                self._send_json(200, {
-                    "reply": final_reply,
-                    "won": won,
-                    "blocked": blocked,
-                    "level": level,
-                    "is_mock": True,
-                    "model": "Gemma 4",
-                    "secret": SECRET_WORD if won else None
-                })
-            else:
-                self.send_error(404)
-
-    app = handler
+    return jsonify({
+        "reply": final_reply,
+        "won": won,
+        "blocked": blocked,
+        "level": level,
+        "is_mock": is_mock,
+        "model": model_name,
+        "secret": SECRET_WORD if won else None
+    })
