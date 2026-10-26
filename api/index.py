@@ -18,6 +18,10 @@ app = Flask(
     static_url_path="/static"
 )
 
+# Export aliases to guarantee detection by any Vercel entrypoint parser
+application = app
+handler = app
+
 # Configuration & Secrets
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4")
@@ -58,6 +62,14 @@ LEVEL_CONFIGS = {
         "code_filter": True
     }
 }
+
+@app.after_request
+def add_cors_headers(response):
+    """Ensure API routes are accessible and uncached for game state."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 def check_ai_provider():
     """Detect available AI backend: Remote Ollama, Cloud API (Groq Gemma), or Simulation."""
@@ -182,10 +194,17 @@ def index():
     try:
         return render_template("index.html")
     except Exception:
-        # Fallback direct read
-        html_path = os.path.join(TEMPLATES_DIR, "index.html")
-        with open(html_path, "r", encoding="utf-8") as f:
-            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+        # Multi-location direct read fallback
+        candidate_paths = [
+            os.path.join(TEMPLATES_DIR, "index.html"),
+            os.path.join(BASE_DIR, "..", "templates", "index.html"),
+            os.path.join(os.getcwd(), "templates", "index.html")
+        ]
+        for path in candidate_paths:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+        return "<h1>Injection Dojo</h1><p>Template loading error.</p>", 500
 
 @app.route("/static/<path:filename>")
 def serve_static(filename):
@@ -205,9 +224,14 @@ def api_status():
 @app.route("/api/attack", methods=["POST"])
 def api_attack():
     data = request.get_json(force=True, silent=True) or {}
-    level = int(data.get("level", 1))
-    user_message = str(data.get("message", "")).strip()
+    try:
+        level = int(data.get("level", 1))
+        if level not in (1, 2, 3):
+            level = 1
+    except (ValueError, TypeError):
+        level = 1
 
+    user_message = str(data.get("message", "")).strip()
     if not user_message:
         return jsonify({"error": "Empty message"}), 400
 
