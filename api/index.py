@@ -19,6 +19,19 @@ app = Flask(
     static_url_path="/static"
 )
 
+# Vercel Rewrite Middleware: Restores original URL from HTTP_X_MATCHED_PATH
+class VercelRewriteMiddleware:
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        matched_path = environ.get("HTTP_X_MATCHED_PATH") or environ.get("HTTP_X_FORWARDED_URI")
+        if matched_path and matched_path != "/api/index":
+            environ["PATH_INFO"] = matched_path.split("?")[0]
+        return self.wsgi_app(environ, start_response)
+
+app.wsgi_app = VercelRewriteMiddleware(app.wsgi_app)
+
 # Export aliases to guarantee detection by any Vercel entrypoint parser
 application = app
 handler = app
@@ -191,6 +204,9 @@ def evaluate_win(raw_reply: str, level: int):
     return won, display_reply, blocked_by_filter
 
 @app.route("/")
+@app.route("/api/index")
+@app.route("/index.html")
+@app.route("/api")
 def index():
     try:
         return render_template("index.html")
@@ -206,6 +222,12 @@ def index():
                 with open(path, "r", encoding="utf-8") as f:
                     return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
         return "<h1>Injection Dojo</h1><p>Template loading error.</p>", 500
+
+@app.errorhandler(404)
+def handle_404(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Endpoint not found"}), 404
+    return index()
 
 @app.route("/static/<path:filename>")
 def serve_static(filename):
