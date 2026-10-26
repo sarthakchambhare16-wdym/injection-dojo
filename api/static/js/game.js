@@ -101,7 +101,7 @@ async function fetchBackendStatus() {
   }
 }
 
-// Live Health Check & Ping for Local Ollama or Cloudflare Tunnel
+// Live Health Check & Ping for Local Ollama or Cloudflare Tunnel (Dual Client + Proxy Engine)
 async function testEndpoint(endpointUrl, isSilent = false) {
   const cleanUrl = (endpointUrl || '').trim().replace(/\/+$/, '');
   if (!cleanUrl) {
@@ -109,58 +109,75 @@ async function testEndpoint(endpointUrl, isSilent = false) {
     return false;
   }
 
-  if (!isSilent) {
+  if (!isSilent && diagnosticStatusText) {
     diagnosticStatusText.textContent = 'Pinging endpoint...';
     diagnosticPill.className = 'diagnostic-pill';
   }
 
   const t0 = performance.now();
+
+  // 1. Try direct browser check (zero-latency when CORS/local permits)
   try {
-    // 1. Probe reachability and latency via /api/version
     const versionRes = await fetchWithTimeout(`${cleanUrl}/api/version`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
-    }, 6000);
+    }, 3000);
 
-    if (!versionRes.ok) {
-      throw new Error(`HTTP ${versionRes.status}`);
+    if (versionRes.ok) {
+      const versionData = await versionRes.json();
+      const latency = Math.round(performance.now() - t0);
+
+      let detectedModel = 'gemma4:e2b';
+      try {
+        const tagsRes = await fetchWithTimeout(`${cleanUrl}/api/tags`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        }, 3000);
+        if (tagsRes.ok) {
+          const tagsData = await tagsRes.json();
+          const models = (tagsData.models || []).map(m => m.name || m.model || '');
+          const found = models.find(m => m.toLowerCase().includes('gemma4:e2b')) ||
+                        models.find(m => m.toLowerCase().includes('gemma4')) ||
+                        models.find(m => m.toLowerCase().includes('gemma'));
+          if (found) detectedModel = found;
+        }
+      } catch (tagErr) {}
+
+      activeModel = detectedModel;
+      isEndpointOnline = true;
+      endpointLatency = latency;
+      updateStatusUI(true, latency, detectedModel, versionData.version);
+      return true;
     }
-
-    const versionData = await versionRes.json();
-    const latency = Math.round(performance.now() - t0);
-
-    // 2. Probe installed models via /api/tags
-    let detectedModel = 'gemma4:e2b';
-    try {
-      const tagsRes = await fetchWithTimeout(`${cleanUrl}/api/tags`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      }, 6000);
-      if (tagsRes.ok) {
-        const tagsData = await tagsRes.json();
-        const models = (tagsData.models || []).map(m => m.name || m.model || '');
-        const found = models.find(m => m.toLowerCase().includes('gemma4:e2b')) ||
-                      models.find(m => m.toLowerCase().includes('gemma4')) ||
-                      models.find(m => m.toLowerCase().includes('gemma')) ||
-                      models[0];
-        if (found) detectedModel = found;
-      }
-    } catch (tagErr) {
-      console.warn("Model tags probe warning:", tagErr);
-    }
-
-    activeModel = detectedModel;
-    isEndpointOnline = true;
-    endpointLatency = latency;
-
-    updateStatusUI(true, latency, detectedModel, versionData.version);
-    return true;
-  } catch (err) {
-    isEndpointOnline = false;
-    endpointLatency = null;
-    updateStatusUI(false, null, err.message);
-    return false;
+  } catch (directErr) {
+    // Direct check failed (e.g. Mixed Content or CORS restriction on https://)
   }
+
+  // 2. Resilient Fallback: Probe through Backend Proxy (Immune to Mixed Content & Browser CORS!)
+  try {
+    const proxyRes = await fetchWithTimeout(`/api/status?endpoint=${encodeURIComponent(cleanUrl)}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    }, 7000);
+
+    if (proxyRes.ok) {
+      const pData = await proxyRes.json();
+      if (pData.ollama_online) {
+        activeModel = pData.active_model || 'gemma4:e2b';
+        isEndpointOnline = true;
+        endpointLatency = pData.latency || Math.round(performance.now() - t0);
+        updateStatusUI(true, endpointLatency, activeModel, pData.daemon_version);
+        return true;
+      }
+    }
+  } catch (proxyErr) {
+    console.warn("Backend proxy probe failed:", proxyErr);
+  }
+
+  isEndpointOnline = false;
+  endpointLatency = null;
+  updateStatusUI(false, null, 'Unreachable');
+  return false;
 }
 
 // Update Visual Status Pills
@@ -183,12 +200,21 @@ function updateStatusUI(online, latency, info, daemonVer = '') {
     if (diagnosticPill) {
       diagnosticPill.className = 'diagnostic-pill error';
       diagnosticStatusText.textContent = '🔴 Disconnected';
-      diagnosticDetails.innerHTML = `
-        Cannot reach endpoint. <strong>Troubleshooting:</strong><br>
-        1. <strong>CORS</strong>: Run <code>$env:OLLAMA_ORIGINS="*" ; ollama serve</code><br>
-        2. <strong>Tunnel</strong>: Run <code>cloudflared tunnel --url http://127.0.0.1:11434</code><br>
-        3. Make sure Ollama is listening on 11434 before starting the tunnel (prevents Cloudflare Error 1033).
-      `;
+
+      const isLocalhost = activeEndpoint.includes('localhost') || activeEndpoint.includes('127.0.0.1');
+      if (isLocalhost && window.location.protocol === 'https:') {
+        diagnosticDetails.innerHTML = `
+          ⚠️ <strong>Cloud Connection Note:</strong> You are accessing this site via HTTPS in the cloud. Cloud servers cannot reach <code>${activeEndpoint}</code> on your laptop.<br>
+          👉 <strong>Solution:</strong> Run <code>start-tunnel.bat</code> in your project, copy the generated <code>https://xxxx.trycloudflare.com</code> URL, paste it above, and click Save!
+        `;
+      } else {
+        diagnosticDetails.innerHTML = `
+          Cannot reach endpoint. <strong>Troubleshooting:</strong><br>
+          1. Run <code>start-tunnel.bat</code> on your laptop.<br>
+          2. Paste the generated <code>https://xxxx.trycloudflare.com</code> address above.<br>
+          3. Click <strong>Test Connection</strong>.
+        `;
+      }
     }
   }
 }

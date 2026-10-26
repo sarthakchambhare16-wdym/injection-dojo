@@ -250,14 +250,50 @@ def handle_404(e):
 def serve_static(filename):
     return send_from_directory(STATIC_DIR, filename)
 
-@app.route("/api/status", methods=["GET"])
+@app.route("/api/status", methods=["GET", "POST"])
 def api_status():
-    provider, model, available = check_ai_provider()
+    import time
+    data = request.get_json(silent=True) or {}
+    custom_endpoint = str(request.args.get("endpoint") or data.get("endpoint") or "").strip().rstrip("/")
+    target_host = custom_endpoint or OLLAMA_HOST
+    
+    latency = None
+    is_online = False
+    active_model = DEFAULT_MODEL
+    available_models = []
+    daemon_version = ""
+
+    if target_host:
+        t0 = time.time()
+        try:
+            req_v = urllib.request.Request(f"{target_host}/api/version", headers={"User-Agent": "InjectionDojo/1.0"})
+            with urllib.request.urlopen(req_v, timeout=5) as resp_v:
+                if resp_v.status == 200:
+                    v_data = json.loads(resp_v.read().decode("utf-8"))
+                    daemon_version = v_data.get("version", "")
+                    latency = int((time.time() - t0) * 1000)
+                    is_online = True
+
+            req_t = urllib.request.Request(f"{target_host}/api/tags", headers={"User-Agent": "InjectionDojo/1.0"})
+            with urllib.request.urlopen(req_t, timeout=5) as resp_t:
+                if resp_t.status == 200:
+                    t_data = json.loads(resp_t.read().decode("utf-8"))
+                    available_models = [m.get("name") for m in t_data.get("models", [])]
+                    found = next((m for m in available_models if "gemma4:e2b" in m.lower()), None) or \
+                            next((m for m in available_models if "gemma4" in m.lower()), None) or \
+                            next((m for m in available_models if "gemma" in m.lower()), None)
+                    if found:
+                        active_model = found
+        except Exception:
+            pass
+
     return jsonify({
-        "ollama_online": (provider != "simulation"),
-        "provider": provider,
-        "active_model": model,
-        "available_models": available,
+        "ollama_online": is_online,
+        "active_model": active_model,
+        "available_models": available_models,
+        "latency": latency,
+        "daemon_version": daemon_version,
+        "endpoint": target_host,
         "levels": LEVEL_CONFIGS
     })
 
