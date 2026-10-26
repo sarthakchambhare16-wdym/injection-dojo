@@ -818,6 +818,251 @@ textarea::placeholder {
 }
 
 /* ==========================================================================
+   Endpoint Ribbon & Tunnel Management
+   ========================================================================== */
+
+.btn-endpoint-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.2);
+  color: var(--dp-color-field);
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--dp-radius-control);
+  cursor: pointer;
+  transition: all var(--dp-motion-interaction);
+}
+
+.btn-endpoint-toggle:hover {
+  background-color: #fcf6ec;
+  border-color: var(--dp-color-primary);
+  color: var(--dp-color-primary);
+}
+
+.endpoint-ribbon {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ribbon-card {
+  background-color: var(--dp-color-surface);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.18);
+  border-radius: var(--dp-radius-card-b);
+  padding: 20px 24px;
+  box-shadow: var(--dp-shadow-sheet);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.ribbon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.1);
+  padding-bottom: 12px;
+}
+
+.ribbon-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ribbon-icon {
+  font-size: 1.5rem;
+  background-color: var(--dp-color-ground);
+  padding: 6px 10px;
+  border-radius: 12px 6px 12px 6px;
+}
+
+.ribbon-title strong {
+  display: block;
+  font-family: var(--dp-typography-display);
+  font-size: 1.15rem;
+  color: var(--dp-color-ink);
+}
+
+.ribbon-title small {
+  display: block;
+  color: var(--dp-color-ink-muted);
+  font-size: 0.85rem;
+}
+
+.btn-close-ribbon {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--dp-color-ink-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.btn-close-ribbon:hover {
+  color: var(--dp-color-ink);
+  background-color: rgba(41, 37, 29, 0.08);
+}
+
+.ribbon-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.endpoint-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.endpoint-input-row label {
+  font-size: var(--dp-typography-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dp-color-ink-muted);
+}
+
+.input-action-wrapper {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.input-action-wrapper input {
+  flex: 1;
+  min-width: 260px;
+  background-color: var(--dp-color-ground);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.2);
+  border-radius: 14px 8px 14px 8px;
+  padding: 10px 14px;
+  font-family: var(--dp-typography-mono);
+  font-size: 0.88rem;
+  color: var(--dp-color-ink);
+  outline: none;
+}
+
+.input-action-wrapper input:focus {
+  border-color: var(--dp-color-primary);
+  outline: 2px solid var(--dp-color-primary);
+  outline-offset: 2px;
+}
+
+.btn-sm {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  height: 40px;
+}
+
+.endpoint-diagnostic {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+}
+
+.diagnostic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--dp-color-ground);
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  padding: 6px 14px;
+  border-radius: var(--dp-radius-control);
+  font-size: var(--dp-typography-metadata);
+  font-weight: 600;
+  color: var(--dp-color-ink-muted);
+}
+
+.diagnostic-pill.online {
+  color: var(--dp-color-primary);
+  border-color: rgba(53, 66, 45, 0.3);
+  background-color: rgba(53, 66, 45, 0.08);
+}
+
+.diagnostic-pill.online .status-dot {
+  background-color: var(--dp-color-primary);
+}
+
+.diagnostic-pill.error {
+  color: var(--dp-color-field);
+  border-color: rgba(105, 71, 55, 0.3);
+  background-color: rgba(105, 71, 55, 0.08);
+}
+
+.diagnostic-pill.error .status-dot {
+  background-color: var(--dp-color-field);
+}
+
+.diagnostic-details {
+  font-size: 0.84rem;
+  color: var(--dp-color-ink-muted);
+}
+
+.diagnostic-details code {
+  background-color: var(--dp-color-surface-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--dp-typography-mono);
+  font-size: 0.8rem;
+}
+
+/* ==========================================================================
+   Gemma 4 Chain-of-Thought (Reasoning) Inspector
+   ========================================================================== */
+
+.thought-container {
+  margin-top: 10px;
+  background-color: #f2ebd9;
+  border: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.16);
+  border-radius: 12px 6px 12px 6px;
+  overflow: hidden;
+}
+
+.thought-summary {
+  padding: 8px 12px;
+  font-family: var(--dp-typography-reading);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dp-color-field);
+  cursor: pointer;
+  background-color: rgba(105, 71, 55, 0.06);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color var(--dp-motion-interaction);
+}
+
+.thought-summary:hover {
+  background-color: rgba(105, 71, 55, 0.12);
+}
+
+.thought-content {
+  padding: 12px 14px;
+  font-family: var(--dp-typography-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--dp-color-ink-muted);
+  max-height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: #faf5eb;
+  border-top: var(--dp-border-hairline) solid rgba(41, 37, 29, 0.1);
+}
+
+/* ==========================================================================
    Responsive Behavior & Reduced Motion
    ========================================================================== */
 

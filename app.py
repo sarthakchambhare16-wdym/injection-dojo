@@ -64,17 +64,17 @@ def check_ollama_status():
         pass
     return False, DEFAULT_MODEL, []
 
-def query_ollama(model_name: str, system_prompt: str, user_message: str):
-    """Send prompt to local Ollama Gemma instance."""
-    url = f"{OLLAMA_HOST}/api/chat"
+def query_ollama(model_name: str, system_prompt: str, user_message: str, host: str = None):
+    """Send prompt to local Ollama Gemma instance via /api/generate with reasoning headroom."""
+    target_host = (host or OLLAMA_HOST).strip().rstrip("/")
+    url = f"{target_host}/api/generate"
     payload = {
         "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ],
+        "system": system_prompt,
+        "prompt": user_message,
         "stream": False,
         "options": {
+            "num_predict": 512,  # Critical: Gemma 4 reasoning token headroom
             "temperature": 0.7,
             "top_p": 0.9
         }
@@ -86,7 +86,24 @@ def query_ollama(model_name: str, system_prompt: str, user_message: str):
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-        return data.get("message", {}).get("content", "").strip()
+        raw_response = (data.get("response") or "").strip()
+        thinking_text = (data.get("thinking") or "").strip()
+
+        # 1. Sanitize any complete or unclosed <think> tags
+        clean_answer = re.sub(r'<think>[\s\S]*?</think>', '', raw_response).strip()
+        clean_answer = re.sub(r'^<think>\s*', '', clean_answer, flags=re.IGNORECASE).strip()
+        final_answer = clean_answer or raw_response
+
+        # 2. Resilient Fallback: If response is empty but thinking exists
+        if not final_answer and thinking_text:
+            match = re.search(r'(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*\$?([A-Da-d])\b', thinking_text, re.IGNORECASE)
+            if match:
+                final_answer = match.group(1).upper()
+            else:
+                lines = [l.strip() for l in thinking_text.split("\n") if l.strip()]
+                final_answer = lines[-1] if lines else thinking_text
+
+        return final_answer, thinking_text
 
 def mock_gemma_reply(level: int, user_message: str):
     """
@@ -203,16 +220,35 @@ class DojoRequestHandler(BaseHTTPRequestHandler):
             config = LEVEL_CONFIGS.get(level, LEVEL_CONFIGS[1])
             system_prompt = config["system_prompt"]
 
+            client_ai_reply = data.get("ai_reply")
+            if client_ai_reply is not None:
+                client_thinking = str(data.get("thinking", "")).strip()
+                won, final_reply, blocked = evaluate_win(str(client_ai_reply), level)
+                return self._send_json(200, {
+                    "reply": final_reply,
+                    "won": won,
+                    "blocked": blocked,
+                    "level": level,
+                    "is_mock": False,
+                    "thinking": client_thinking,
+                    "model": data.get("model", DEFAULT_MODEL),
+                    "secret": SECRET_WORD if won else None
+                })
+
+            custom_endpoint = str(data.get("endpoint", "")).strip() or OLLAMA_HOST
             online, model_name, _ = check_ollama_status()
             is_mock = False
+            thinking_text = ""
 
-            if online:
-                try:
-                    ai_reply = query_ollama(model_name, system_prompt, user_message)
-                except Exception as e:
+            try:
+                if custom_endpoint and custom_endpoint != OLLAMA_HOST:
+                    ai_reply, thinking_text = query_ollama(DEFAULT_MODEL, system_prompt, user_message, host=custom_endpoint)
+                elif online:
+                    ai_reply, thinking_text = query_ollama(model_name, system_prompt, user_message)
+                else:
                     ai_reply = mock_gemma_reply(level, user_message)
                     is_mock = True
-            else:
+            except Exception:
                 ai_reply = mock_gemma_reply(level, user_message)
                 is_mock = True
 
@@ -224,6 +260,7 @@ class DojoRequestHandler(BaseHTTPRequestHandler):
                 "blocked": blocked,
                 "level": level,
                 "is_mock": is_mock,
+                "thinking": thinking_text,
                 "model": model_name if online and not is_mock else "Gemma 4 (Simulation)",
                 "secret": SECRET_WORD if won else None
             })

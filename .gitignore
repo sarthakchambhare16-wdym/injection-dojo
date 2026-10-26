@@ -9,6 +9,10 @@ venv/
 .venv/
 ENV/
 
+# Binaries
+bin/
+*.exe
+
 # Vercel
 .vercel/
 

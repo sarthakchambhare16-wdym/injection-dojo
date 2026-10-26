@@ -21,6 +21,9 @@
         </div>
       </div>
       <div class="header-status">
+        <button class="btn-ghost btn-endpoint-toggle" id="endpoint-toggle-btn" title="Configure Ollama or Cloudflare Tunnel endpoint">
+          <span>⚙️ Bridge Endpoint</span>
+        </button>
         <div class="status-pill" id="ollama-status">
           <span class="status-dot"></span>
           <span id="ollama-text">Checking Ollama...</span>
@@ -28,6 +31,46 @@
         <div class="model-badge" id="model-badge">Gemma 4</div>
       </div>
     </header>
+
+    <!-- Dynamic Endpoint Configuration Ribbon -->
+    <section class="endpoint-ribbon" id="endpoint-ribbon" style="display: none;">
+      <div class="ribbon-card">
+        <div class="ribbon-header">
+          <div class="ribbon-title">
+            <span class="ribbon-icon">⚡</span>
+            <div>
+              <strong>Cloudflare Tunnel & Local Ollama Bridge</strong>
+              <small>Connect Vercel to your laptop's local Gemma 4 model via Cloudflare Tunnel or local host</small>
+            </div>
+          </div>
+          <button class="btn-close-ribbon" id="close-ribbon-btn" title="Close ribbon">&times;</button>
+        </div>
+        <div class="ribbon-body">
+          <div class="endpoint-input-row">
+            <label for="endpoint-input">Endpoint URL:</label>
+            <div class="input-action-wrapper">
+              <input 
+                type="url" 
+                id="endpoint-input" 
+                placeholder="https://your-tunnel.trycloudflare.com or http://localhost:11434"
+                spellcheck="false"
+                autocomplete="off">
+              <button type="button" class="btn-primary btn-sm" id="save-endpoint-btn">Save</button>
+              <button type="button" class="btn-secondary btn-sm" id="test-endpoint-btn">Test Connection</button>
+            </div>
+          </div>
+          <div class="endpoint-diagnostic" id="endpoint-diagnostic">
+            <div class="diagnostic-pill" id="diagnostic-pill">
+              <span class="status-dot"></span>
+              <span id="diagnostic-status-text">Probing endpoint...</span>
+            </div>
+            <div class="diagnostic-details" id="diagnostic-details">
+              Local default: <code>http://localhost:11434</code>. Make sure <code>OLLAMA_ORIGINS="*"</code> is set before starting tunnel.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Level Navigation -->
     <nav class="level-nav">

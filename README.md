@@ -7,7 +7,7 @@
 
 ## 🎯 About the Game
 
-Injection Dojo is an educational web game where players learn prompt injection attacks and defenses against an AI model (Gemma 4) guarding a secret word (**`BANANA`**).
+Injection Dojo is an educational web game where players learn prompt injection attacks and defenses against an AI model (Google Gemma 4) guarding a secret word (**`BANANA`**).
 
 ### 🏆 The 3 Escalating Levels
 
@@ -19,38 +19,35 @@ Injection Dojo is an educational web game where players learn prompt injection a
 
 ---
 
-## ☁️ Deploy to Vercel (Public Browser URL)
+## ⚡ Connecting Local Ollama (Gemma 4) to Vercel via Cloudflare Tunnel
 
-This project is pre-configured with `vercel.json`, `api/index.py`, and `requirements.txt` for 1-click serverless deployment on Vercel.
+Since your Vercel deployment lives on the cloud and your Gemma 4 model runs locally on your laptop, use our automated Cloudflare Tunnel bridge:
 
-### Method 1: Deploy via GitHub (Recommended)
-1. Push this repository to your GitHub account:
-   ```bash
-   git remote add origin https://github.com/<your-username>/injection-dojo.git
-   git branch -M main
-   git push -u origin main
-   ```
-2. Go to **[vercel.com/new](https://vercel.com/new)** and import your `injection-dojo` repository.
-3. Click **Deploy**. Vercel will automatically build the Python serverless function and host the static assets globally!
-
-### Method 2: Deploy using Vercel CLI
-If you have Node.js / npm:
-```bash
-npx vercel
+### Step 1: Launch the Tunnel Bridge
+Simply double-click **`start-tunnel.bat`** (or run in PowerShell):
+```powershell
+.\start-tunnel.ps1
 ```
-Follow the interactive prompts to link and deploy in seconds.
+
+This automated script:
+1. Configures **`OLLAMA_ORIGINS="*"`** so browser requests from `*.vercel.app` aren't blocked by CORS.
+2. Checks that port 11434 is live before starting the tunnel to **prevent Cloudflare Error 1033**.
+3. Starts `cloudflared` and generates a public HTTPS URL (e.g. `https://xxxx.trycloudflare.com`).
+
+### Step 2: Paste Tunnel URL into Vercel Web App
+1. Open your Vercel deployment URL in the browser.
+2. Click the **⚙️ Bridge Endpoint** button in the header.
+3. Paste your generated Cloudflare URL (e.g. `https://xxxx.trycloudflare.com`).
+4. Click **Save** & **Test Connection**. The status pill will turn 🟢 **Online (<latency>ms)**!
 
 ---
 
-## 🧠 AI Backend on Vercel
+## 🧠 Gemma 4 Reasoning & Chain-of-Thought (Thought Inspector)
 
-When hosted on Vercel:
-1. **Interactive Demo Simulation (Default, Zero Config)**:  
-   Works immediately out of the box with realistic simulated Gemma 4 defenses for all 3 levels. Anyone visiting the public link can play instantly without setting up API keys or running local servers!
-2. **Cloud Gemma 4 (Optional)**:  
-   Set `GROQ_API_KEY` in your Vercel Project Settings > Environment Variables to use lightning-fast cloud-hosted Gemma models.
-3. **Remote Ollama (Optional)**:  
-   Set `OLLAMA_HOST` in your Vercel Project Settings to your public tunnel URL (e.g. `https://your-tunnel.ngrok-free.app`).
+In Ollama 0.40+, **Gemma 4 acts as a thinking/reasoning model**:
+- **Token Headroom (`num_predict: 512`)**: Prevents the token budget from being exhausted during step-by-step thinking (`done_reason: "length"`), ensuring the final response is never returned empty.
+- **Thinking Extraction & Fallbacks**: Cleans `<think>` tags and includes a resilient fallback parser to extract the conclusion.
+- **Expandable Thought Inspector**: Click the **🧠 Chain-of-Thought (Reasoning)** container under any Gemma 4 response to inspect the model's inner reasoning monologue!
 
 ---
 
@@ -61,9 +58,3 @@ Run locally using Python:
 python app.py
 ```
 Open **http://127.0.0.1:5000** in your browser.
-
-If you have Ollama installed locally:
-```bash
-ollama run gemma4
-```
-The game will automatically connect to your local Gemma 4 model!
