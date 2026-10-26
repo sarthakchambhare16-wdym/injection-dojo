@@ -71,4 +71,4 @@ Write-Host "Look for the public URL in the logs below (e.g. https://xxxx.tryclou
 Write-Host "Copy that URL and paste it into the 'Bridge Endpoint' ribbon on your Vercel website!" -ForegroundColor Green
 Write-Host "=================================================================`n" -ForegroundColor Cyan
 
-& $cloudflaredCmd tunnel --url http://127.0.0.1:11434
+& $cloudflaredCmd tunnel --protocol http2 --url http://127.0.0.1:11434 --http-host-header "localhost:11434"
